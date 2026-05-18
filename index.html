@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SentiMind — Analisis Sentimen Komentar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #12121a;
+    --bg3: #1a1a26;
+    --card: #16161f;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0eeff;
+    --muted: rgba(240,238,255,0.5);
+    --accent: #7c6dfa;
+    --accent2: #a78bfa;
+    --pos: #34d399;
+    --neg: #f87171;
+    --neu: #94a3b8;
+    --pos-bg: rgba(52,211,153,0.12);
+    --neg-bg: rgba(248,113,113,0.12);
+    --neu-bg: rgba(148,163,184,0.1);
+    --glow: rgba(124,109,250,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ---- NAV ---- */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 40px;
+    background: rgba(10,10,15,0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 22px;
+    color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+  }
+
+  .logo-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+  }
+
+  .nav-links { display: flex; gap: 8px; }
+
+  .nav-btn {
+    background: none; border: none; color: var(--muted);
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    padding: 8px 18px; border-radius: 8px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-btn:hover, .nav-btn.active { color: var(--text); background: var(--bg3); }
+  .nav-btn.active { color: var(--accent2); }
+
+  /* ---- PAGES ---- */
+  .page { display: none; padding-top: 80px; min-height: 100vh; }
+  .page.active { display: block; }
+
+  /* ---- HOME PAGE ---- */
+  .hero {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center;
+    padding: 100px 40px 80px;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 800px 600px at 50% 0%, rgba(124,109,250,0.08) 0%, transparent 70%);
+  }
+
+  .hero-grid {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%);
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(124,109,250,0.1); border: 1px solid rgba(124,109,250,0.3);
+    padding: 6px 16px; border-radius: 100px;
+    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent2); margin-bottom: 28px;
+    font-weight: 500;
+  }
+
+  .hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.5s infinite; }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(42px, 7vw, 80px);
+    font-weight: 800; line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 22px;
+  }
+
+  .h1-grad {
+    background: linear-gradient(135deg, #fff 0%, var(--accent2) 60%, #c4b5fd 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 18px; color: var(--muted); max-width: 560px;
+    line-height: 1.7; margin-bottom: 48px; font-weight: 300;
+  }
+
+  .cta-group { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+
+  .btn-primary {
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 12px;
+    padding: 14px 32px; font-size: 15px; font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: all 0.25s;
+    box-shadow: 0 0 30px rgba(124,109,250,0.3);
+  }
+  .btn-primary:hover { background: #6c5ce7; transform: translateY(-2px); box-shadow: 0 8px 40px rgba(124,109,250,0.4); }
+
+  .btn-secondary {
+    background: var(--bg3); color: var(--text);
+    border: 1px solid var(--border2); border-radius: 12px;
+    padding: 14px 32px; font-size: 15px; font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: all 0.25s;
+  }
+  .btn-secondary:hover { background: var(--bg3); border-color: var(--accent); transform: translateY(-2px); }
+
+  /* stats strip */
+  .stats-strip {
+    display: flex; justify-content: center; gap: 0;
+    padding: 0 40px 60px; max-width: 800px; margin: 0 auto;
+    border: 1px solid var(--border); border-radius: 16px;
+    background: var(--card); overflow: hidden;
+  }
+
+  .stat-item {
+    flex: 1; padding: 28px 24px; text-align: center;
+    border-right: 1px solid var(--border);
+    position: relative;
+  }
+  .stat-item:last-child { border-right: none; }
+
+  .stat-num {
+    font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 700;
+    color: var(--text); display: block;
+  }
+  .stat-label { font-size: 13px; color: var(--muted); margin-top: 4px; display: block; }
+
+  /* features */
+  .section { padding: 80px 40px; max-width: 1100px; margin: 0 auto; }
+
+  .section-label {
+    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif; font-size: 40px; font-weight: 700;
+    margin-bottom: 16px; letter-spacing: -0.02em;
+  }
+
+  .section-sub { font-size: 17px; color: var(--muted); max-width: 500px; line-height: 1.7; margin-bottom: 56px; font-weight: 300; }
+
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+
+  .feat-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px;
+    transition: all 0.3s; position: relative; overflow: hidden;
+  }
+  .feat-card:hover { border-color: var(--border2); transform: translateY(-4px); }
+  .feat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .feat-card:hover::before { opacity: 1; }
+
+  .feat-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: rgba(124,109,250,0.1); border: 1px solid rgba(124,109,250,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 18px;
+  }
+
+  .feat-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+  .feat-desc { font-size: 14px; color: var(--muted); line-height: 1.7; font-weight: 300; }
+
+  /* how it works */
+  .how-section { padding: 80px 40px; background: var(--bg2); }
+  .how-inner { max-width: 900px; margin: 0 auto; }
+
+  .steps { display: flex; flex-direction: column; gap: 0; margin-top: 40px; }
+
+  .step {
+    display: flex; gap: 32px; padding: 32px 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: 'Syne', sans-serif; font-size: 48px; font-weight: 800;
+    color: rgba(124,109,250,0.15); min-width: 64px; line-height: 1;
+    padding-top: 4px;
+  }
+
+  .step-content h3 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  .step-content p { font-size: 15px; color: var(--muted); line-height: 1.7; font-weight: 300; }
+
+  /* team */
+  .team-section { padding: 80px 40px; max-width: 1100px; margin: 0 auto; }
+  .team-grid { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 40px; }
+
+  .team-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px 28px; display: flex; align-items: center; gap: 16px;
+    transition: all 0.2s;
+  }
+  .team-card:hover { border-color: var(--accent); }
+
+  .team-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px;
+  }
+
+  .team-name { font-weight: 500; font-size: 15px; }
+  .team-role { font-size: 13px; color: var(--muted); }
+
+  /* ---- ANALYSIS PAGE ---- */
+  .analysis-wrap { max-width: 900px; margin: 0 auto; padding: 40px 40px 80px; }
+
+  .page-header { margin-bottom: 40px; }
+  .page-header h2 { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+  .page-header p { color: var(--muted); font-size: 15px; }
+
+  .input-mode-tabs {
+    display: flex; gap: 8px; margin-bottom: 24px;
+    background: var(--bg2); padding: 6px; border-radius: 12px;
+    border: 1px solid var(--border); width: fit-content;
+  }
+
+  .mode-tab {
+    padding: 8px 20px; border-radius: 8px; border: none;
+    background: none; color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; cursor: pointer; transition: all 0.2s;
+  }
+  .mode-tab.active { background: var(--accent); color: #fff; }
+
+  .input-area {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px; margin-bottom: 20px;
+  }
+
+  .comment-row {
+    display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start;
+  }
+
+  .comment-num {
+    min-width: 28px; height: 28px; border-radius: 8px;
+    background: var(--bg3); display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--muted); font-weight: 500; flex-shrink: 0; margin-top: 8px;
+  }
+
+  .comment-input {
+    flex: 1; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    outline: none; transition: border-color 0.2s; resize: none;
+    min-height: 42px;
+  }
+  .comment-input:focus { border-color: var(--accent); }
+  .comment-input::placeholder { color: var(--muted); }
+
+  .remove-btn {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 18px; padding: 6px; margin-top: 4px;
+    border-radius: 6px; transition: all 0.2s; flex-shrink: 0;
+  }
+  .remove-btn:hover { color: var(--neg); background: var(--neg-bg); }
+
+  .add-row-btn {
+    background: none; border: 1px dashed var(--border2); color: var(--muted);
+    width: 100%; padding: 10px; border-radius: 10px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; transition: all 0.2s;
+  }
+  .add-row-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(124,109,250,0.05); }
+
+  .bulk-textarea {
+    width: 100%; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    min-height: 180px; resize: vertical; outline: none;
+    transition: border-color 0.2s;
+  }
+  .bulk-textarea:focus { border-color: var(--accent); }
+  .bulk-textarea::placeholder { color: var(--muted); }
+
+  .bulk-hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  .analyze-btn {
+    background: linear-gradient(135deg, var(--accent), #9333ea);
+    color: #fff; border: none; border-radius: 12px;
+    padding: 14px 36px; font-size: 15px; font-weight: 500;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.25s; box-shadow: 0 4px 24px rgba(124,109,250,0.3);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .analyze-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(124,109,250,0.45); }
+  .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%;
+    animation: spin 0.7s linear infinite; display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Results */
+  .results-area { margin-top: 32px; }
+
+  .results-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .results-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 600; }
+
+  .summary-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .summary-card {
+    padding: 20px; border-radius: 14px; border: 1px solid;
+    text-align: center; transition: transform 0.2s;
+  }
+  .summary-card:hover { transform: scale(1.02); }
+  .summary-card.pos { background: var(--pos-bg); border-color: rgba(52,211,153,0.25); }
+  .summary-card.neg { background: var(--neg-bg); border-color: rgba(248,113,113,0.25); }
+  .summary-card.neu { background: var(--neu-bg); border-color: rgba(148,163,184,0.2); }
+
+  .summary-count { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 700; }
+  .summary-card.pos .summary-count { color: var(--pos); }
+  .summary-card.neg .summary-count { color: var(--neg); }
+  .summary-card.neu .summary-count { color: var(--neu); }
+  .summary-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  /* donut chart */
+  .donut-wrap {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 24px; margin-bottom: 24px;
+    display: flex; align-items: center; gap: 40px;
+  }
+
+  .donut-svg { flex-shrink: 0; }
+
+  .donut-legend { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+
+  .legend-item { display: flex; align-items: center; justify-content: space-between; }
+  .legend-left { display: flex; align-items: center; gap: 10px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .legend-name { font-size: 14px; color: var(--muted); }
+  .legend-pct { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 600; }
+  .legend-bar-wrap { height: 4px; background: var(--bg3); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .legend-bar { height: 4px; border-radius: 2px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+
+  /* result rows */
+  .result-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .result-row {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 20px;
+    display: flex; align-items: flex-start; gap: 16px;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-badge {
+    padding: 4px 12px; border-radius: 8px; font-size: 12px;
+    font-weight: 600; letter-spacing: 0.05em; flex-shrink: 0; margin-top: 2px;
+  }
+  .result-badge.pos { background: var(--pos-bg); color: var(--pos); }
+  .result-badge.neg { background: var(--neg-bg); color: var(--neg); }
+  .result-badge.neu { background: var(--neu-bg); color: var(--neu); }
+
+  .result-text { flex: 1; font-size: 14px; color: var(--text); line-height: 1.6; }
+
+  .result-score {
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--muted); flex-shrink: 0; margin-top: 2px;
+  }
+
+  .score-bar {
+    height: 3px; border-radius: 2px; margin-top: 8px;
+    transition: width 0.6s ease;
+  }
+  .score-bar.pos { background: var(--pos); }
+  .score-bar.neg { background: var(--neg); }
+  .score-bar.neu { background: var(--neu); }
+
+  /* export row */
+  .export-row { display: flex; gap: 10px; margin-top: 20px; }
+  .export-btn {
+    background: var(--bg2); border: 1px solid var(--border2); color: var(--text);
+    padding: 9px 20px; border-radius: 10px; font-size: 13px;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s;
+  }
+  .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ---- HISTORY PAGE ---- */
+  .history-wrap { max-width: 900px; margin: 0 auto; padding: 40px 40px 80px; }
+
+  .history-empty {
+    text-align: center; padding: 80px 40px;
+    color: var(--muted);
+  }
+  .history-empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .history-empty-text { font-size: 16px; }
+
+  .history-list { display: flex; flex-direction: column; gap: 14px; }
+
+  .history-item {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 24px; cursor: pointer; transition: all 0.2s;
+  }
+  .history-item:hover { border-color: var(--border2); background: var(--bg3); }
+
+  .history-item-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .history-date { font-size: 13px; color: var(--muted); }
+  .history-count { font-size: 13px; color: var(--muted); }
+
+  .history-bars { display: flex; gap: 6px; align-items: center; }
+  .hbar { height: 6px; border-radius: 3px; min-width: 4px; }
+
+  .history-summary { font-size: 14px; color: var(--muted); }
+
+  /* about */
+  .about-wrap { max-width: 800px; margin: 0 auto; padding: 40px 40px 80px; }
+  .about-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 36px; margin-bottom: 20px;
+  }
+  .about-card h3 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 600; margin-bottom: 14px; }
+  .about-card p { font-size: 15px; color: var(--muted); line-height: 1.8; font-weight: 300; }
+
+  .model-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25);
+    padding: 8px 16px; border-radius: 10px; font-size: 13px; color: var(--pos);
+    margin-top: 16px;
+  }
+
+  .about-team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-top: 24px; }
+
+  .about-member {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px; display: flex; flex-direction: column; align-items: center; text-align: center;
+  }
+  .about-member-av {
+    width: 52px; height: 52px; border-radius: 50%; margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px;
+  }
+  .about-member-name { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .about-member-nim { font-size: 12px; color: var(--muted); }
+
+  /* notifications */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--bg3); border: 1px solid var(--border2);
+    padding: 12px 20px; border-radius: 12px; font-size: 14px;
+    transform: translateY(100px); opacity: 0; transition: all 0.3s;
+    z-index: 999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  @media (max-width: 640px) {
+    nav { padding: 14px 20px; }
+    .hero { padding: 60px 20px; }
+    h1 { font-size: 36px; }
+    .stats-strip { flex-direction: column; gap: 0; }
+    .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+    .section, .analysis-wrap, .history-wrap, .about-wrap { padding: 40px 20px 60px; }
+    .summary-cards { grid-template-columns: 1fr; }
+    .donut-wrap { flex-direction: column; }
+    nav { overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo" onclick="showPage('home')">
+    <div class="logo-dot"></div>
+    SentiMind
+  </div>
+  <div class="nav-links">
+    <button class="nav-btn active" onclick="showPage('home')" id="nav-home">Beranda</button>
+    <button class="nav-btn" onclick="showPage('analysis')" id="nav-analysis">Analisis</button>
+    <button class="nav-btn" onclick="showPage('history')" id="nav-history">Riwayat</button>
+    <button class="nav-btn" onclick="showPage('about')" id="nav-about">Tentang</button>
+  </div>
+</nav>
+
+<!-- ======= HOME PAGE ======= -->
+<div class="page active" id="page-home">
+
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+
+    <div class="hero-badge">
+      <div class="hero-badge-dot"></div>
+      AI-Powered · Bahasa Indonesia
+    </div>
+
+    <h1>
+      <span class="h1-grad">Pahami Sentimen</span><br>
+      Komentar Anda
+    </h1>
+    <p class="hero-sub">
+      Analisis hingga 10 komentar media sosial sekaligus. Deteksi sentimen positif, negatif, dan netral dengan model AI bahasa Indonesia.
+    </p>
+
+    <div class="cta-group">
+      <button class="btn-primary" onclick="showPage('analysis')">Mulai Analisis →</button>
+      <button class="btn-secondary" onclick="showPage('about')">Pelajari Lebih</button>
+    </div>
+  </div>
+
+  <div style="max-width:800px; margin: 0 auto 80px; padding: 0 40px;">
+    <div class="stats-strip">
+      <div class="stat-item" style="padding:28px 0">
+        <span class="stat-num" id="stat-total">0</span>
+        <span class="stat-label">Komentar Dianalisis</span>
+      </div>
+      <div class="stat-item" style="padding:28px 0">
+        <span class="stat-num" id="stat-sessions">0</span>
+        <span class="stat-label">Sesi Analisis</span>
+      </div>
+      <div class="stat-item" style="padding:28px 0">
+        <span class="stat-num" id="stat-pos-rate">0%</span>
+        <span class="stat-label">Tingkat Positif</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="section">
+    <p class="section-label">Fitur Utama</p>
+    <h2 class="section-title">Dirancang untuk kemudahan analisis</h2>
+    <p class="section-sub">Dari input hingga visualisasi, semuanya dalam satu antarmuka yang intuitif.</p>
+
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon">🧠</div>
+        <div class="feat-title">AI Bahasa Indonesia</div>
+        <p class="feat-desc">Menggunakan model AI yang dioptimalkan khusus untuk memahami nuansa bahasa Indonesia dalam konteks media sosial.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <div class="feat-title">Analisis Batch</div>
+        <p class="feat-desc">Masukkan hingga 10 komentar sekaligus dan dapatkan hasil analisis lengkap dalam hitungan detik.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📊</div>
+        <div class="feat-title">Visualisasi Interaktif</div>
+        <p class="feat-desc">Lihat distribusi sentimen dalam grafik pie yang dinamis, lengkap dengan skor kepercayaan untuk setiap komentar.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📋</div>
+        <div class="feat-title">Input Fleksibel</div>
+        <p class="feat-desc">Pilih mode input satu per satu atau tempelkan banyak komentar sekaligus dalam mode bulk untuk efisiensi maksimal.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">💾</div>
+        <div class="feat-title">Riwayat Analisis</div>
+        <p class="feat-desc">Semua hasil analisis tersimpan otomatis di browser Anda untuk referensi dan perbandingan di masa mendatang.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📤</div>
+        <div class="feat-title">Ekspor Data</div>
+        <p class="feat-desc">Unduh hasil analisis dalam format CSV atau salin ke clipboard untuk digunakan dalam laporan dan presentasi.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="how-section">
+    <div class="how-inner">
+      <p class="section-label">Cara Kerja</p>
+      <h2 class="section-title">Tiga langkah mudah</h2>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <h3>Masukkan Komentar</h3>
+            <p>Ketik atau tempel komentar media sosial yang ingin Anda analisis. Gunakan mode individual untuk kontrol penuh, atau mode bulk untuk efisiensi.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <h3>Proses AI</h3>
+            <p>Model AI kami memproses setiap komentar menggunakan Indonesian RoBERTa yang telah dilatih khusus, mengidentifikasi sentimen dan menghitung skor kepercayaan.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <h3>Baca Hasil</h3>
+            <p>Dapatkan visualisasi distribusi sentimen, tabel hasil lengkap, dan opsi ekspor untuk laporan Anda.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======= ANALYSIS PAGE ======= -->
+<div class="page" id="page-analysis">
+  <div class="analysis-wrap">
+    <div class="page-header">
+      <h2>🔍 Analisis Sentimen</h2>
+      <p>Masukkan komentar media sosial untuk dianalisis sentimennya</p>
+    </div>
+
+    <div class="input-mode-tabs">
+      <button class="mode-tab active" onclick="switchMode('individual')">Individual</button>
+      <button class="mode-tab" onclick="switchMode('bulk')">Bulk</button>
+    </div>
+
+    <!-- Individual mode -->
+    <div id="mode-individual">
+      <div class="input-area">
+        <div id="comment-list"></div>
+        <button class="add-row-btn" onclick="addCommentRow()" id="add-btn">+ Tambah komentar (maks. 10)</button>
+      </div>
+    </div>
+
+    <!-- Bulk mode -->
+    <div id="mode-bulk" style="display:none">
+      <div class="input-area">
+        <textarea class="bulk-textarea" id="bulk-input"
+          placeholder="Tempel komentar di sini, satu komentar per baris...&#10;Contoh:&#10;Produk ini sangat bagus dan memuaskan!&#10;Pelayanan buruk, tidak akan beli lagi&#10;Pengiriman cukup cepat"></textarea>
+        <p class="bulk-hint">💡 Maksimal 10 baris pertama yang akan dianalisis</p>
+      </div>
+    </div>
+
+    <!-- Server status indicator -->
+    <div id="server-status" style="display:flex; align-items:center; gap:10px; margin-bottom:20px;
+         background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 18px;">
+      <div id="status-dot" style="width:8px;height:8px;border-radius:50%;background:var(--neu);flex-shrink:0;transition:background 0.3s;"></div>
+      <div>
+        <span id="status-text" style="font-size:13px;font-weight:500;">Memeriksa koneksi ke server...</span><br>
+        <span id="status-sub" style="font-size:12px;color:var(--muted);">Pastikan app.py sudah berjalan di terminal</span>
+      </div>
+      <button onclick="checkServer()" style="margin-left:auto;background:var(--bg3);border:1px solid var(--border);
+              border-radius:8px;color:var(--muted);padding:6px 14px;font-size:12px;cursor:pointer;
+              font-family:'DM Sans',sans-serif;">Cek Ulang</button>
+    </div>
+
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <button class="analyze-btn" onclick="runAnalysis()" id="analyze-btn">
+        <div class="spinner" id="spinner"></div>
+        <span id="btn-text">⚡ Analisis Sekarang</span>
+      </button>
+      <button class="export-btn" onclick="clearAll()" style="margin-left:auto">Hapus Semua</button>
+    </div>
+
+    <div class="results-area" id="results-area" style="display:none">
+      <div class="results-header">
+        <div class="results-title">Hasil Analisis</div>
+        <div class="export-row">
+          <button class="export-btn" onclick="exportCSV()">📥 Ekspor CSV</button>
+          <button class="export-btn" onclick="copyResults()">📋 Salin</button>
+        </div>
+      </div>
+
+      <div class="summary-cards">
+        <div class="summary-card pos">
+          <div class="summary-count" id="cnt-pos">0</div>
+          <div class="summary-label">😊 Positif</div>
+        </div>
+        <div class="summary-card neg">
+          <div class="summary-count" id="cnt-neg">0</div>
+          <div class="summary-label">😞 Negatif</div>
+        </div>
+        <div class="summary-card neu">
+          <div class="summary-count" id="cnt-neu">0</div>
+          <div class="summary-label">😐 Netral</div>
+        </div>
+      </div>
+
+      <!-- Donut chart + legend -->
+      <div class="donut-wrap">
+        <svg class="donut-svg" width="160" height="160" viewBox="0 0 160 160" id="donut-svg">
+          <circle cx="80" cy="80" r="60" fill="none" stroke="#1a1a26" stroke-width="28"/>
+          <circle id="arc-pos" cx="80" cy="80" r="60" fill="none" stroke="#34d399" stroke-width="28"
+            stroke-dasharray="0 377" stroke-linecap="round" transform="rotate(-90 80 80)"
+            style="transition: stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)"/>
+          <circle id="arc-neg" cx="80" cy="80" r="60" fill="none" stroke="#f87171" stroke-width="28"
+            stroke-dasharray="0 377" stroke-linecap="round" transform="rotate(-90 80 80)"
+            style="transition: stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)"/>
+          <circle id="arc-neu" cx="80" cy="80" r="60" fill="none" stroke="#94a3b8" stroke-width="28"
+            stroke-dasharray="0 377" stroke-linecap="round" transform="rotate(-90 80 80)"
+            style="transition: stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)"/>
+          <text x="80" y="76" text-anchor="middle" fill="#f0eeff" font-size="22" font-family="Syne, sans-serif" font-weight="700" id="donut-center-num">0</text>
+          <text x="80" y="94" text-anchor="middle" fill="rgba(240,238,255,0.5)" font-size="11" font-family="DM Sans, sans-serif">komentar</text>
+        </svg>
+
+        <div class="donut-legend">
+          <div>
+            <div class="legend-item">
+              <div class="legend-left">
+                <div class="legend-dot" style="background:var(--pos)"></div>
+                <span class="legend-name">Positif</span>
+              </div>
+              <span class="legend-pct" style="color:var(--pos)" id="pct-pos">0%</span>
+            </div>
+            <div class="legend-bar-wrap"><div class="legend-bar" style="background:var(--pos);width:0%" id="bar-pos"></div></div>
+          </div>
+          <div>
+            <div class="legend-item">
+              <div class="legend-left">
+                <div class="legend-dot" style="background:var(--neg)"></div>
+                <span class="legend-name">Negatif</span>
+              </div>
+              <span class="legend-pct" style="color:var(--neg)" id="pct-neg">0%</span>
+            </div>
+            <div class="legend-bar-wrap"><div class="legend-bar" style="background:var(--neg);width:0%" id="bar-neg"></div></div>
+          </div>
+          <div>
+            <div class="legend-item">
+              <div class="legend-left">
+                <div class="legend-dot" style="background:var(--neu)"></div>
+                <span class="legend-name">Netral</span>
+              </div>
+              <span class="legend-pct" style="color:var(--neu)" id="pct-neu">0%</span>
+            </div>
+            <div class="legend-bar-wrap"><div class="legend-bar" style="background:var(--neu);width:0%" id="bar-neu"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result rows -->
+      <div class="result-list" id="result-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======= HISTORY PAGE ======= -->
+<div class="page" id="page-history">
+  <div class="history-wrap">
+    <div class="page-header">
+      <h2>📂 Riwayat Analisis</h2>
+      <p>Semua sesi analisis tersimpan otomatis di browser Anda</p>
+    </div>
+    <div id="history-content"></div>
+  </div>
+</div>
+
+<!-- ======= ABOUT PAGE ======= -->
+<div class="page" id="page-about">
+  <div class="about-wrap">
+    <div class="page-header">
+      <h2>ℹ️ Tentang SentiMind</h2>
+      <p>Analisis Sentimen Komentar Media Sosial — Kelompok 6</p>
+    </div>
+
+    <div class="about-card">
+      <h3>📌 Tentang Proyek</h3>
+      <p>SentiMind adalah aplikasi analisis sentimen komentar media sosial berbahasa Indonesia yang dikembangkan oleh Kelompok 6. Aplikasi ini memungkinkan pengguna untuk menganalisis sentimen dari komentar media sosial secara batch, dengan dukungan hingga 10 komentar sekaligus.</p>
+      <p style="margin-top:14px">Hasil analisis meliputi label sentimen (Positif, Negatif, Netral) beserta skor kepercayaan model, serta visualisasi distribusi sentimen dalam bentuk grafik interaktif.</p>
+      <div class="model-badge">
+        ✅ Model: Indonesian RoBERTa Base Sentiment Classifier
+      </div>
+    </div>
+
+    <div class="about-card">
+      <h3>🛠️ Teknologi</h3>
+      <p>Proyek asli dibangun menggunakan <strong>Streamlit</strong> dan <strong>HuggingFace Transformers</strong> (model <code>w11wo/indonesian-roberta-base-sentiment-classifier</code>). Versi web ini dibangun ulang dengan HTML/CSS/JavaScript murni, mengintegrasikan API AI untuk analisis sentimen bahasa Indonesia.</p>
+    </div>
+
+    <div class="about-card">
+      <h3>👥 Anggota Kelompok 6</h3>
+      <div class="about-team-grid" id="team-grid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// =====================
+// STATE
+// =====================
+let currentMode = 'individual';
+let commentCount = 0;
+let lastResults = [];
+let history = JSON.parse(localStorage.getItem('sentimind-history') || '[]');
+
+const TEAM = [
+  { name: 'Maulana Putra', nim: 'NIM: 001', color: '#7c6dfa', bg: 'rgba(124,109,250,0.15)' },
+  { name: 'Anggota 2', nim: 'NIM: 002', color: '#34d399', bg: 'rgba(52,211,153,0.15)' },
+  { name: 'Anggota 3', nim: 'NIM: 003', color: '#f87171', bg: 'rgba(248,113,113,0.15)' },
+  { name: 'Anggota 4', nim: 'NIM: 004', color: '#a78bfa', bg: 'rgba(167,139,250,0.15)' },
+  { name: 'Anggota 5', nim: 'NIM: 005', color: '#fb923c', bg: 'rgba(251,146,60,0.15)' },
+  { name: 'Anggota 6', nim: 'NIM: 006', color: '#38bdf8', bg: 'rgba(56,189,248,0.15)' },
+];
+
+// =====================
+// INIT
+// =====================
+function init() {
+  for (let i = 0; i < 3; i++) addCommentRow();
+  updateStats();
+  renderTeam();
+  setTimeout(checkServer, 800);
+}
+
+function renderTeam() {
+  const grid = document.getElementById('team-grid');
+  grid.innerHTML = TEAM.map(m => `
+    <div class="about-member">
+      <div class="about-member-av" style="background:${m.bg};color:${m.color}">
+        ${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}
+      </div>
+      <div class="about-member-name">${m.name}</div>
+      <div class="about-member-nim">${m.nim}</div>
+    </div>
+  `).join('');
+}
+
+// =====================
+// NAVIGATION
+// =====================
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'history') renderHistory();
+  if (name === 'home') updateStats();
+  window.scrollTo(0, 0);
+}
+
+// =====================
+// INPUT MODE
+// =====================
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach((t, i) => {
+    t.classList.toggle('active', (i === 0 && mode === 'individual') || (i === 1 && mode === 'bulk'));
+  });
+  document.getElementById('mode-individual').style.display = mode === 'individual' ? '' : 'none';
+  document.getElementById('mode-bulk').style.display = mode === 'bulk' ? '' : 'none';
+}
+
+// =====================
+// COMMENT ROWS
+// =====================
+function addCommentRow() {
+  if (commentCount >= 10) return;
+  commentCount++;
+  const list = document.getElementById('comment-list');
+  const row = document.createElement('div');
+  row.className = 'comment-row';
+  row.id = 'row-' + commentCount;
+  row.innerHTML = `
+    <div class="comment-num">${commentCount}</div>
+    <textarea class="comment-input" placeholder="Ketik komentar ke-${commentCount}..." rows="1"
+      oninput="autoResize(this)" id="input-${commentCount}"></textarea>
+    <button class="remove-btn" onclick="removeRow(${commentCount})" title="Hapus">✕</button>
+  `;
+  list.appendChild(row);
+  if (commentCount >= 10) document.getElementById('add-btn').style.display = 'none';
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+function removeRow(id) {
+  const row = document.getElementById('row-' + id);
+  if (row) {
+    row.style.opacity = '0'; row.style.transform = 'translateX(10px)';
+    row.style.transition = 'all 0.2s';
+    setTimeout(() => { row.remove(); commentCount = Math.max(0, commentCount - 1); }, 200);
+  }
+  document.getElementById('add-btn').style.display = '';
+}
+
+function getComments() {
+  if (currentMode === 'bulk') {
+    return document.getElementById('bulk-input').value
+      .split('\n').map(s => s.trim()).filter(Boolean).slice(0, 10);
+  }
+  const texts = [];
+  document.querySelectorAll('.comment-input').forEach(el => {
+    if (el.value.trim()) texts.push(el.value.trim());
+  });
+  return texts;
+}
+
+function clearAll() {
+  document.getElementById('comment-list').innerHTML = '';
+  document.getElementById('bulk-input') && (document.getElementById('bulk-input').value = '');
+  document.getElementById('results-area').style.display = 'none';
+  commentCount = 0;
+  document.getElementById('add-btn').style.display = '';
+  for (let i = 0; i < 3; i++) addCommentRow();
+}
+
+// =====================
+// SERVER & ANALYSIS
+// Model runs locally via app.py (Flask backend)
+// =====================
+const API = 'https://maulanaputra4444-sentimind-api.hf.space';
+
+async function checkServer() {
+  const dot = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
+  const sub = document.getElementById('status-sub');
+  dot.style.background = 'var(--neu)';
+  text.textContent = 'Memeriksa koneksi...';
+  try {
+    const res = await fetch(`${API}/health`, { signal: AbortSignal.timeout(3000) });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      dot.style.background = 'var(--pos)';
+      text.textContent = 'Server aktif — siap menganalisis';
+      sub.textContent = data.model;
+    }
+  } catch {
+    dot.style.background = 'var(--neg)';
+    text.textContent = 'Server tidak terdeteksi';
+    sub.textContent = 'Pastikan Hugging Face Space sudah aktif';
+  }
+}
+
+async function runAnalysis() {
+  const comments = getComments();
+  if (!comments.length) { toast('Masukkan setidaknya satu komentar!'); return; }
+
+  const btn = document.getElementById('analyze-btn');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btn-text');
+  btn.disabled = true;
+  spinner.style.display = 'block';
+  btnText.textContent = 'Menganalisis...';
+
+  document.getElementById('results-area').style.display = 'block';
+  document.getElementById('result-list').innerHTML = '';
+
+  try {
+    const res = await fetch(`${API}/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comments })
+    });
+
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+    const results = data.results;
+
+    // Show rows with staggered animation
+    const list = document.getElementById('result-list');
+    results.forEach((r, i) => {
+      setTimeout(() => {
+        const cls = r.sentiment === 'Positive' ? 'pos' : r.sentiment === 'Negative' ? 'neg' : 'neu';
+        const emoji = r.sentiment === 'Positive' ? '😊' : r.sentiment === 'Negative' ? '😞' : '😐';
+        const label = r.sentiment === 'Positive' ? 'Positif' : r.sentiment === 'Negative' ? 'Negatif' : 'Netral';
+        const pct = Math.round(r.score * 100);
+        const row = document.createElement('div');
+        row.className = 'result-row';
+        row.innerHTML = `
+          <span class="result-badge ${cls}">${emoji} ${label}</span>
+          <div class="result-text">
+            ${escHtml(r.comment)}
+            <div class="score-bar ${cls}" style="width:${pct}%"></div>
+          </div>
+          <span class="result-score">${pct}%</span>
+        `;
+        list.appendChild(row);
+      }, i * 120);
+    });
+
+    setTimeout(() => {
+      const valid = results.filter(r => !r.error);
+      lastResults = valid;
+      updateSummaryUI(valid);
+      saveHistory(valid);
+      updateStats();
+      document.getElementById('results-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toast(`Selesai! ${valid.length} komentar dianalisis.`);
+    }, results.length * 120 + 200);
+
+  } catch (err) {
+    toast('Gagal terhubung ke server. Cek Hugging Face Space kamu.');
+    checkServer();
+  }
+
+  btn.disabled = false;
+  spinner.style.display = 'none';
+  btnText.textContent = '⚡ Analisis Sekarang';
+}
+
+function updateSummaryUI(results) {
+  const pos = results.filter(r => r.sentiment === 'Positive').length;
+  const neg = results.filter(r => r.sentiment === 'Negative').length;
+  const neu = results.filter(r => r.sentiment === 'Neutral').length;
+  const total = results.length;
+
+  document.getElementById('cnt-pos').textContent = pos;
+  document.getElementById('cnt-neg').textContent = neg;
+  document.getElementById('cnt-neu').textContent = neu;
+
+  const pPos = total ? Math.round(pos / total * 100) : 0;
+  const pNeg = total ? Math.round(neg / total * 100) : 0;
+  const pNeu = 100 - pPos - pNeg;
+
+  document.getElementById('pct-pos').textContent = pPos + '%';
+  document.getElementById('pct-neg').textContent = pNeg + '%';
+  document.getElementById('pct-neu').textContent = pNeu + '%';
+
+  setTimeout(() => {
+    document.getElementById('bar-pos').style.width = pPos + '%';
+    document.getElementById('bar-neg').style.width = pNeg + '%';
+    document.getElementById('bar-neu').style.width = pNeu + '%';
+  }, 100);
+
+  const circ = 2 * Math.PI * 60;
+  const arcPos = document.getElementById('arc-pos');
+  const arcNeg = document.getElementById('arc-neg');
+  const arcNeu = document.getElementById('arc-neu');
+  arcPos.setAttribute('stroke-dasharray', `0 ${circ}`);
+  arcNeg.setAttribute('stroke-dasharray', `0 ${circ}`);
+  arcNeu.setAttribute('stroke-dasharray', `0 ${circ}`);
+  arcNeg.setAttribute('stroke-dashoffset', -(circ * pPos / 100));
+  arcNeu.setAttribute('stroke-dashoffset', -(circ * (pPos + pNeg) / 100));
+  document.getElementById('donut-center-num').textContent = total;
+  setTimeout(() => {
+    arcPos.setAttribute('stroke-dasharray', `${circ*pPos/100} ${circ - circ*pPos/100}`);
+    arcNeg.setAttribute('stroke-dasharray', `${circ*pNeg/100} ${circ - circ*pNeg/100}`);
+    arcNeu.setAttribute('stroke-dasharray', `${circ*pNeu/100} ${circ - circ*pNeu/100}`);
+  }, 150);
+}
+
+// =====================
+// DISPLAY RESULTS (used when loading from history)
+// =====================
+function displayResults(results) {
+  document.getElementById('results-area').style.display = 'block';
+  document.getElementById('results-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  updateSummaryUI(results);
+
+  // Result rows
+  const list = document.getElementById('result-list');
+  list.innerHTML = results.map((r, i) => {
+    const cls = r.sentiment === 'Positive' ? 'pos' : r.sentiment === 'Negative' ? 'neg' : 'neu';
+    const emoji = r.sentiment === 'Positive' ? '😊' : r.sentiment === 'Negative' ? '😞' : '😐';
+    const pct = Math.round(r.score * 100);
+    const label = r.sentiment === 'Positive' ? 'Positif' : r.sentiment === 'Negative' ? 'Negatif' : 'Netral';
+    return `
+      <div class="result-row" style="animation-delay:${i * 0.07}s">
+        <span class="result-badge ${cls}">${emoji} ${label}</span>
+        <div class="result-text">
+          ${escHtml(r.comment)}
+          <div class="score-bar ${cls}" style="width:${pct}%"></div>
+        </div>
+        <span class="result-score">${pct}%</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// =====================
+// HISTORY
+// =====================
+function saveHistory(results) {
+  const entry = {
+    id: Date.now(),
+    date: new Date().toLocaleString('id-ID'),
+    results,
+    pos: results.filter(r=>r.sentiment==='Positive').length,
+    neg: results.filter(r=>r.sentiment==='Negative').length,
+    neu: results.filter(r=>r.sentiment==='Neutral').length,
+    total: results.length
+  };
+  history.unshift(entry);
+  if (history.length > 50) history = history.slice(0, 50);
+  localStorage.setItem('sentimind-history', JSON.stringify(history));
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-content');
+  if (!history.length) {
+    el.innerHTML = `<div class="history-empty">
+      <div class="history-empty-icon">📭</div>
+      <div class="history-empty-text">Belum ada riwayat analisis.<br>Mulai analisis pertama Anda!</div>
+      <button class="btn-primary" style="margin-top:24px" onclick="showPage('analysis')">Mulai Analisis →</button>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="history-list">` +
+    history.map(h => {
+      const total = h.total || 1;
+      const pPos = Math.round(h.pos/total*100);
+      const pNeg = Math.round(h.neg/total*100);
+      const pNeu = 100 - pPos - pNeg;
+      return `<div class="history-item" onclick="loadHistoryItem(${h.id})">
+        <div class="history-item-top">
+          <span class="history-date">📅 ${h.date}</span>
+          <span class="history-count">${h.total} komentar</span>
+        </div>
+        <div class="history-bars">
+          <div class="hbar" style="background:var(--pos);width:${Math.max(4, pPos*1.5)}px"></div>
+          <div class="hbar" style="background:var(--neg);width:${Math.max(4, pNeg*1.5)}px"></div>
+          <div class="hbar" style="background:var(--neu);width:${Math.max(4, pNeu*1.5)}px"></div>
+          <span style="font-size:12px;color:var(--muted);margin-left:6px">${pPos}% positif · ${pNeg}% negatif · ${pNeu}% netral</span>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+}
+
+function loadHistoryItem(id) {
+  const item = history.find(h => h.id === id);
+  if (!item) return;
+  lastResults = item.results;
+  showPage('analysis');
+  setTimeout(() => {
+    document.getElementById('results-area').style.display = 'block';
+    displayResults(item.results);
+    document.getElementById('results-area').scrollIntoView({ behavior: 'smooth' });
+  }, 100);
+}
+
+// =====================
+// STATS (homepage)
+// =====================
+function updateStats() {
+  const total = history.reduce((s, h) => s + h.total, 0);
+  const sessions = history.length;
+  const posTotal = history.reduce((s, h) => s + h.pos, 0);
+  const rate = total ? Math.round(posTotal / total * 100) : 0;
+
+  animCount('stat-total', total);
+  animCount('stat-sessions', sessions);
+  document.getElementById('stat-pos-rate').textContent = rate + '%';
+}
+
+function animCount(id, target) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  let start = parseInt(el.textContent) || 0;
+  const step = Math.ceil((target - start) / 20);
+  if (step === 0) { el.textContent = target; return; }
+  const interval = setInterval(() => {
+    start += step;
+    if (start >= target) { el.textContent = target; clearInterval(interval); }
+    else el.textContent = start;
+  }, 30);
+}
+
+// =====================
+// EXPORT
+// =====================
+function exportCSV() {
+  if (!lastResults.length) return;
+  const rows = [['Komentar','Sentimen','Skor (%)']];
+  lastResults.forEach(r => rows.push([`"${r.comment.replace(/"/g,'""')}"`, r.sentiment, Math.round(r.score*100)]));
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'sentimind-results.csv'; a.click();
+  toast('CSV berhasil diunduh!');
+}
+
+function copyResults() {
+  if (!lastResults.length) return;
+  const text = lastResults.map(r => `${r.comment} → ${r.sentiment} (${Math.round(r.score*100)}%)`).join('\n');
+  navigator.clipboard.writeText(text).then(() => toast('Hasil disalin ke clipboard!'));
+}
+
+// =====================
+// TOAST
+// =====================
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// =====================
+// BOOT
+// =====================
+init();
+</script>
+</body>
+</html>
